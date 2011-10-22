@@ -1,6 +1,5 @@
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
-const KeyFile = imports.gi.GLib.KeyFile;
 
 const St = imports.gi.St;
 const Main = imports.ui.main;
@@ -10,6 +9,8 @@ const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const Lang = imports.lang;
 const FileUtils = imports.misc.fileUtils;
+
+const AppsPath = GLib.get_home_dir() + '/.local/user/apps';
 
 function AppsMenu() {
   this._init.apply(this, arguments);
@@ -26,8 +27,7 @@ AppsMenu.prototype = {
   },
 
   _createDefaultApps: function() {
-    let _appsPath = GLib.get_home_dir() + '/Desktop/Apps';
-    let _appsDir = Gio.file_new_for_path(_appsPath);
+    let _appsDir = Gio.file_new_for_path(AppsPath);
 
     /* try to list dir async
     FileUtils.listDirAsync(_appsDir, Lang.bind(this, function(files) {
@@ -56,25 +56,12 @@ AppsMenu.prototype = {
       let name = info.get_name();
       if( name.indexOf('.desktop') > -1) {
         // add menu entry
-        let desktopPath =  _appsPath + '/' + name;
+        let desktopPath =  AppsPath + '/' + name;
         this.defaultItems[i] = this.addAppItem(desktopPath);
         i++;
       }
     }
     fileEnum.close(null);
-    //let app = Shell.AppSystem.get_default().lookup_setting(_appsPath + 'term.desktop');
-    //app.activate();
-
-  /*
-   * create menu entry
-
-  let placeid = 0;
-  this.defaultItems[placeid] = new PopupMenu.PopupMenuItem("teST");
-  let icon = this.defaultPlaces[placeid].iconFactory(PLACE_ICON_SIZE);
-  this.defaultItems[placeid].addActor(icon, { align: St.Align.END});
-  this.defaultItems[placeid].place = this.defaultPlaces[placeid];
-  this.menu.addMenuItem(this.defaultItems[placeid]);
-  */
     
   },
 
@@ -83,14 +70,14 @@ AppsMenu.prototype = {
     let appInfo = new Gio.DesktopAppInfo.new_from_filename(desktopPath);
     if (!appInfo) {
       global.log('App for desktop file ' + desktopPath + ' could not be loaded!');
-      return;
+      return null;
     }
 
     // click handler -- no more syntax errors in here?
     let menuItem = this._createAppItem(appInfo, function(w, ev) {
-        if(! appInfo.launch([], NULL)) {
-          global.log('Failed to launch ' + appInfo.get_commandline);
-        }
+      if(!appInfo.launch([], null)) {
+        global.log('Failed to launch ' + appInfo.get_commandline);
+      }
     });
     this.menu.addMenuItem(menuItem);
 
@@ -102,7 +89,8 @@ AppsMenu.prototype = {
     menuItem.connect('activate', Lang.bind(this, function (menuItem, event) {
       callback(menuItem, event);      
     }));
-    menuItem.icon = appInfo.get_icon();
+    //menuItem.set_icon_from_gicon( appInfo.get_icon() );
+    //menuItem.actor = appInfo.get_icon();
     return menuItem;
   },  
 };
