@@ -20,6 +20,7 @@ AppsMenu.prototype = {
   __proto__: PanelMenu.SystemStatusButton.prototype,
 
   _init: function() {
+    // FIXME icon
     PanelMenu.SystemStatusButton.prototype._init.call(this, 'folder');
 
     this.defaultItems = [];
@@ -29,7 +30,7 @@ AppsMenu.prototype = {
   _createDefaultApps: function() {
     let _appsDir = Gio.file_new_for_path(AppsPath);
 
-    /* try to list dir async
+    /* TODO try to list dir async
     FileUtils.listDirAsync(_appsDir, Lang.bind(this, function(files) {
       for (let i = 0; i< files.length; i++) {
         this.defaultItems[i] = new PopupMenu.PopupMenuItem(files[i]);
@@ -38,7 +39,6 @@ AppsMenu.prototype = {
     }));
     */
 
-    /* from fileUtils.js, * extensionSystem.js */
     let fileEnum;
     let file, info;
     let i = 0;
@@ -49,13 +49,13 @@ AppsMenu.prototype = {
       return;
     }
 
+    // add menu entry for each file
     while ((info = fileEnum.next_file(null)) != null) {
       let fileType = info.get_file_type();
       if (fileType == Gio.FileType.DIRECTORY)
         continue;
       let name = info.get_name();
       if( name.indexOf('.desktop') > -1) {
-        // add menu entry
         let desktopPath =  AppsPath + '/' + name;
         this.defaultItems[i] = this.addAppItem(desktopPath);
         i++;
@@ -66,14 +66,12 @@ AppsMenu.prototype = {
   },
 
   addAppItem: function(desktopPath) {
-    // load desktop file
     let appInfo = new Gio.DesktopAppInfo.new_from_filename(desktopPath);
     if (!appInfo) {
       global.log('App for desktop file ' + desktopPath + ' could not be loaded!');
       return null;
     }
 
-    // click handler -- no more syntax errors in here?
     let menuItem = this._createAppItem(appInfo, function(w, ev) {
       if(!appInfo.launch([], null)) {
         global.log('Failed to launch ' + appInfo.get_commandline);
@@ -86,11 +84,13 @@ AppsMenu.prototype = {
         
   _createAppItem: function(appInfo, callback) {
     let menuItem = new PopupMenu.PopupMenuItem(appInfo.get_name());
+    // FIXME icon
+    //let icon  =  appInfo.get_icon();
+    //menuItem._icon = icon;
     menuItem.connect('activate', Lang.bind(this, function (menuItem, event) {
       callback(menuItem, event);      
     }));
-    //menuItem.set_icon_from_gicon( appInfo.get_icon() );
-    //menuItem.actor = appInfo.get_icon();
+
     return menuItem;
   },  
 };
