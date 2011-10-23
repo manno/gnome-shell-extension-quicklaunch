@@ -16,11 +16,30 @@ function AppsMenu() {
   this._init.apply(this, arguments);
 }
 
+function PopupGiconMenuItem() {
+    this._init.apply(this, arguments);
+}
+
+PopupGiconMenuItem.prototype = {
+    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+
+    _init: function (text, gIcon, params) {
+        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+
+        this.label = new St.Label({ text: text });
+        this.addActor(this.label);
+        this._icon = new St.Icon({ 
+            gicon: gIcon,
+            style_class: 'popup-menu-icon' });
+        this.addActor(this._icon, { align: St.Align.END });
+    },
+};
+
 AppsMenu.prototype = {
   __proto__: PanelMenu.SystemStatusButton.prototype,
 
   _init: function() {
-    // FIXME icon
+    // FIXME folder icon
     PanelMenu.SystemStatusButton.prototype._init.call(this, 'folder');
 
     this.defaultItems = [];
@@ -83,10 +102,7 @@ AppsMenu.prototype = {
   },
         
   _createAppItem: function(appInfo, callback) {
-    let menuItem = new PopupMenu.PopupMenuItem(appInfo.get_name());
-    // FIXME icon
-    //let icon  =  appInfo.get_icon();
-    //menuItem._icon = icon;
+    let menuItem = new PopupGiconMenuItem(appInfo.get_name(), appInfo.get_icon(), {});
     menuItem.connect('activate', Lang.bind(this, function (menuItem, event) {
       callback(menuItem, event);      
     }));
