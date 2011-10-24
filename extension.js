@@ -12,10 +12,6 @@ const FileUtils = imports.misc.fileUtils;
 
 const AppsPath = GLib.get_home_dir() + '/.local/user/apps';
 
-function AppsMenu() {
-  this._init.apply(this, arguments);
-}
-
 function PopupGiconMenuItem() {
     this._init.apply(this, arguments);
 }
@@ -35,12 +31,15 @@ PopupGiconMenuItem.prototype = {
     },
 };
 
+function AppsMenu() {
+  this._init.apply(this, arguments);
+}
+
 AppsMenu.prototype = {
   __proto__: PanelMenu.SystemStatusButton.prototype,
 
   _init: function() {
-    // FIXME folder icon
-    PanelMenu.SystemStatusButton.prototype._init.call(this, 'folder');
+    PanelMenu.SystemStatusButton.prototype._init.call(this, 'start-here');
 
     this.defaultItems = [];
     this._createDefaultApps();
