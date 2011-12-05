@@ -5,17 +5,17 @@ const GLib = imports.gi.GLib;
 
 const St = imports.gi.St;
 const Main = imports.ui.main;
+const Mainloop = imports.mainloop;
 const Shell = imports.gi.Shell;
 
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const Lang = imports.lang;
 const FileUtils = imports.misc.fileUtils;
+const Util = imports.misc.util;
 
-const AppsPaths = [ GLib.get_home_dir() + '/.local/user/apps',
-    GLib.get_home_dir() + '/.local/share/gnome-shell/quicklaunch',
-];
-
+const AppsPath = GLib.get_home_dir() + '/.local/share/gnome-shell/quicklaunch';
+const AppsPaths = [ GLib.get_home_dir() + '/.local/user/apps', AppsPath ];
 
 /*
  * Gicon Menu Item Object
@@ -51,20 +51,68 @@ AppsMenu.prototype = {
 
     _init: function() {
         PanelMenu.SystemStatusButton.prototype._init.call(this, 'start-here');
+        this._setupDirectory();
+        this._setupAppMenuItems();
+        this._setupNewDialog();
+        this._setupDirectoryMonitor();
+    },
 
-        this.defaultItems = [];
+    /*
+     * create dir unless exists
+     */
+    _setupDirectory: function() {
+        let dir = Gio.file_new_for_path(AppsPath);
+        if (!dir.query_exists(null)) {
+            global.log('create dir ' + AppsPath );
+            dir.make_directory_with_parents(null);
+        }
+        this._appDirectory = dir;
+    },
+
+    /*
+     * reload the menu
+     */
+    _reloadAppMenu: function() {
+        this.menu.removeAll();
+        this._setupAppMenuItems();
+        this._setupNewDialog();
+    },
+
+    /*
+     * change directory monitor, see placeDisplay.js
+     */
+    _setupDirectoryMonitor: function() {
+        if (!this._appDirectory.query_exists(null))
+            return;
+        this._monitor = this._appDirectory.monitor_directory(Gio.FileMonitorFlags.NONE, null);
+        this._appDirectoryTimeoutId = 0;
+        this._monitor.connect('changed', Lang.bind(this, function () {
+            if (this._appDirectoryTimeoutId > 0)
+                return;
+            /* Defensive event compression */
+            this._appDirectoryTimeoutId = Mainloop.timeout_add(100, Lang.bind(this, function () {
+                this._appDirectoryTimeoutId = 0;
+                this._reloadAppMenu();
+                return false;
+            }));
+        }));
+    },
+
+    /*
+     * setup menu items for all desktop files
+     */
+    _setupAppMenuItems: function(path) {
         for (let path in AppsPaths)
             this._createDefaultApps(AppsPaths[path]);
-        this._addDialog();
     },
 
     /*
      * load desktop files from a directory
      */
-    _createDefaultApps: function(appsPath) {
-        let _appsDir = Gio.file_new_for_path(appsPath);
+    _createDefaultApps: function(path) {
+        let _appsDir = Gio.file_new_for_path(path);
         if (!_appsDir.query_exists(null)) {
-            global.log('App path ' + appsPath + ' could not be opened!');
+            global.log('App path ' + path + ' could not be opened!');
             return;
         }
 
@@ -85,8 +133,8 @@ AppsMenu.prototype = {
                 continue;
             let name = info.get_name();
             if( name.indexOf('.desktop') > -1) {
-                let desktopPath =  appsPath + '/' + name;
-                this.defaultItems[i] = this._addAppItem(desktopPath);
+                let desktopPath =  GLib.build_filenamev([path, name]);
+                this._addAppItem(desktopPath);
                 i++;
             }
         }
@@ -129,14 +177,31 @@ AppsMenu.prototype = {
     /*
      * add "new app"-dialog link to popup menu
      */
-    _addDialog: function() {
-        /*
+    _setupNewDialog: function() {
         let item = new PopupMenu.PopupSeparatorMenuItem();
         this.menu.addMenuItem(item);
-        item = new PopupMenu.PopupMenuItem(_("Create new launcher...")),
+        item = new PopupMenu.PopupMenuItem(_("Create new launcher..."));
+        item.connect('activate', Lang.bind(this, function(){
+            if (!this._appDirectory.query_exists(null))
+                return;
+            // create filename
+            let uuid = this._createUUID();
+            let uuidDesktopPath = GLib.build_filenamev([AppsPath, uuid+'.desktop']);
+            Util.trySpawn( ['gnome-desktop-item-edit', uuidDesktopPath ]);
+        }));
         this.menu.addMenuItem(item);
-        */
-    }
+    },
+
+    /*
+     * thanks stackoverflow:
+     */
+    _createUUID: function() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+            return v.toString(16);
+        });
+    },
+
 };
 
 /*
