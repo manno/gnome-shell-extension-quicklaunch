@@ -12,7 +12,7 @@ To populate the popup menu, put .desktop files into ~/.local/share/gnome-shell/q
 
 = INSTALL =
 
-1. Put this folder below ~/.local/share/gnome-shell/extensions/ and rename it to Quicklauchn@github.com
+1. Put this folder below ~/.local/share/gnome-shell/extensions/ and rename it to QuickLaunch@github.com
 
 2. create ~/.local/share/gnome-shell/quicklaunch and put a few .desktop files in there
 
