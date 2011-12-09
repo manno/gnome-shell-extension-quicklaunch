@@ -146,7 +146,7 @@ AppsMenu.prototype = {
      */
     _addAppItem: function(desktopPath) {
         // from http://www.roojs.com/seed/gir-1.2-gtk-3.0/gjs/
-        let appInfo = new Gio.DesktopAppInfo.new_from_filename(desktopPath);
+        let appInfo = Gio.DesktopAppInfo.new_from_filename(desktopPath);
         if (!appInfo) {
             global.log('App for desktop file ' + desktopPath + ' could not be loaded!');
             return null;
