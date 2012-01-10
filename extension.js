@@ -51,10 +51,16 @@ AppsMenu.prototype = {
 
     _init: function() {
         PanelMenu.SystemStatusButton.prototype._init.call(this, 'start-here');
+        this.connect('destroy', Lang.bind(this, this._onDestroy));
         this._setupDirectory();
         this._setupAppMenuItems();
         this._setupNewDialog();
         this._setupDirectoryMonitor();
+    },
+
+    _onDestroy: function() {
+        this._monitor.cancel();
+        Mainloop.source_remove(this._appDirectoryTimeoutId);
     },
 
     /*
