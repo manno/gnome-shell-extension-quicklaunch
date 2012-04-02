@@ -22,7 +22,12 @@ To populate the popup menu, put .desktop files into ~/.local/share/gnome-shell/q
 
 4. use gnome-tweak-tool to enable the new shell extension
 
-= RELATED
+= RELATED =
 
 * http://library.gnome.org/admin/system-admin-guide/stable/menustructure-desktopentry.html.en
 * http://standards.freedesktop.org/desktop-entry-spec/latest/
+
+= BUGS =
+
+* Popup menu overflows if to many application are added
+  https://github.com/katastrophie/QuickLaunch/issues/1
