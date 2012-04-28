@@ -133,18 +133,35 @@ AppsMenu.prototype = {
         }
 
         // add menu entry for each file
+        let apparray = new Array();
+        //get '.desktop' file list into apparray
         while ((info = fileEnum.next_file(null)) != null) {
             let fileType = info.get_file_type();
             if (fileType == Gio.FileType.DIRECTORY)
                 continue;
             let name = info.get_name();
             if( name.indexOf('.desktop') > -1) {
-                let desktopPath =  GLib.build_filenamev([path, name]);
-                this._addAppItem(desktopPath);
-                i++;
+                apparray.push(name);
             }
         }
         fileEnum.close(null);
+        // sort apparray (case insensitive)
+        apparray.sort(function(x,y){
+          var a = String(x).toUpperCase();
+          var b = String(y).toUpperCase();
+          if (a > b)
+             return 1;
+          if (a < b)
+             return -1;
+          return 0;
+        });
+        // add menu entry for each item in apparray
+        for(let ind in apparray) {
+            let name = apparray[ind];
+            let desktopPath =  GLib.build_filenamev([path, name]);
+            this._addAppItem(desktopPath);
+            i++;
+        }
     },
 
     /*
