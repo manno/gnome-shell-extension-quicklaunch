@@ -1,1 +1,3 @@
-popup-menu { max-height: 90%; }
+.popup-menu { height: 400px; }
+.popup-sub-menu { height: 400px; }
+.panel-menu { height: 400px; }

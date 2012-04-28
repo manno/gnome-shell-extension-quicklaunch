@@ -52,6 +52,10 @@ AppsMenu.prototype = {
     _init: function() {
         PanelMenu.SystemStatusButton.prototype._init.call(this, 'start-here');
         this.connect('destroy', Lang.bind(this, this._onDestroy));
+      
+        // exchange menu subclass
+        this.setMenu(new PopupMenu.PopupSubMenu(this.actor, this.actor));
+
         this._setupDirectory();
         this._setupAppMenuItems();
         this._setupNewDialog();
