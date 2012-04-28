@@ -132,6 +132,8 @@ AppsMenu.prototype = {
             return;
         }
 
+	let fileNames = Array();
+
         // add menu entry for each file
         while ((info = fileEnum.next_file(null)) != null) {
             let fileType = info.get_file_type();
@@ -139,12 +141,19 @@ AppsMenu.prototype = {
                 continue;
             let name = info.get_name();
             if( name.indexOf('.desktop') > -1) {
-                let desktopPath =  GLib.build_filenamev([path, name]);
-                this._addAppItem(desktopPath);
+		fileNames.push(name);
                 i++;
             }
         }
         fileEnum.close(null);
+
+	fileNames.sort();
+	for(let tmpPath in fileNames) {
+		let name = fileNames[tmpPath];
+		let desktopPath =  GLib.build_filenamev([path, name]);
+		this._addAppItem(desktopPath);
+	}
+
     },
 
     /*
