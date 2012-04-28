@@ -168,10 +168,10 @@ AppsMenu.prototype = {
         if (this.menu.numMenuItems == 0) {
             this.menu.addMenuItem(menuItem);
         } else {
-            let sortKey = appInfo.get_name() || desktopPath;
+            let sortKey = String( appInfo.get_name() || desktopPath ).toUpperCase()
             let pos = 0;
             for (let item in this.menu._getMenuItems()) {
-                if (item.label > sortKey) {
+                if ( String(item.label).toUpperCase() > sortKey) {
                     // add before item and leave early
                     this.menu.addMenuItem(menuItem, pos);
                     return menuItem;
