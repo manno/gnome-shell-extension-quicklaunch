@@ -163,7 +163,24 @@ AppsMenu.prototype = {
                     global.log('Failed to launch ' + appInfo.get_commandline);
                 }
             });
-        this.menu.addMenuItem(menuItem);
+
+        // alphabetically sort list by app name
+        if (this.menu.numMenuItems == 0) {
+            this.menu.addMenuItem(menuItem);
+        } else {
+            let sortKey = appInfo.get_name() || desktopPath;
+            let pos = 0;
+            for (let item in this.menu._getMenuItems()) {
+                if (item.label > sortKey) {
+                    // add before item and leave early
+                    this.menu.addMenuItem(menuItem, pos);
+                    return menuItem;
+                }
+                pos++;
+            }
+            // append at end of list
+            this.menu.addMenuItem(menuItem, pos);
+        }
 
         return menuItem;
     },
