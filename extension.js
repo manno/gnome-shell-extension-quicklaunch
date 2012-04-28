@@ -165,23 +165,20 @@ AppsMenu.prototype = {
             });
 
         // alphabetically sort list by app name
-        if (this.menu.numMenuItems == 0) {
-            this.menu.addMenuItem(menuItem);
-        } else {
-            let sortKey = String( appInfo.get_name() || desktopPath ).toUpperCase()
-            let pos = 0;
-            for (let item in this.menu._getMenuItems()) {
-                if ( String(item.label).toUpperCase() > sortKey) {
-                    // add before item and leave early
-                    this.menu.addMenuItem(menuItem, pos);
-                    return menuItem;
-                }
-                pos++;
+        let sortKey = String( appInfo.get_name() || desktopPath ).toUpperCase()
+        let pos = 0;
+        let children = this.menu._getMenuItems();
+        for (let i = 0; i < children.length; i++) {
+            let item = children[i];
+            if ( String(item.label.text).toUpperCase() > sortKey) {
+                // add before item and leave early
+                this.menu.addMenuItem(menuItem, pos);
+                return menuItem;
             }
-            // append at end of list
-            this.menu.addMenuItem(menuItem, pos);
+            pos++;
         }
-
+        // append at end of list
+        this.menu.addMenuItem(menuItem, pos);
         return menuItem;
     },
 
