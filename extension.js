@@ -159,25 +159,19 @@ AppsMenu.prototype = {
         }
 
         let menuItem = this._createAppItem(appInfo, function(w, ev) {
-                if(!appInfo.launch([], null)) {
-                    global.log('Failed to launch ' + appInfo.get_commandline);
-                }
-            });
+            if(!appInfo.launch([], null)) {
+                global.log('Failed to launch ' + appInfo.get_commandline);
+            }
+        });
 
         // alphabetically sort list by app name
-        let sortKey = String( appInfo.get_name() || desktopPath ).toUpperCase()
-        let pos = 0;
-        let children = this.menu._getMenuItems();
-        for (let i = 0; i < children.length; i++) {
-            let item = children[i];
-            if ( String(item.label.text).toUpperCase() > sortKey) {
-                // add before item and leave early
-                this.menu.addMenuItem(menuItem, pos);
-                return menuItem;
-            }
-            pos++;
-        }
-        // append at end of list
+        let sortKey = appInfo.get_name() || desktopPath;
+        let pos = Util.lowerBound(this.menu._getMenuItems(), sortKey, function (a,b) {
+            if (String(a.label.text).toUpperCase() > String(b).toUpperCase())
+                return 0;
+            else
+                return -1;
+        });
         this.menu.addMenuItem(menuItem, pos);
         return menuItem;
     },
