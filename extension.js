@@ -50,7 +50,7 @@ AppsMenu.prototype = {
     __proto__: PanelMenu.SystemStatusButton.prototype,
 
     _init: function() {
-        PanelMenu.SystemStatusButton.prototype._init.call(this, 'start-here');
+        PanelMenu.SystemStatusButton.prototype._init.call(this, 'system-run-symbolic');
         this.connect('destroy', Lang.bind(this, this._onDestroy));
         this._setupDirectory();
         this._setupAppMenuItems();
