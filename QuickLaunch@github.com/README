@@ -30,4 +30,4 @@ To populate the popup menu, put .desktop files into ~/.local/share/gnome-shell/q
 = BUGS =
 
 * Popup menu overflows if too many application are added
-  https://github.com/katastrophie/QuickLaunch/issues/1
+  https://github.com/katastrophie/gnome-shell-extension-quicklaunch/issues/1

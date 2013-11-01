@@ -31,26 +31,26 @@ PopupGiconMenuItem.prototype = {
         PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
 
         this.label = new St.Label({ text: text });
-        this.addActor(this.label);
+        this.actor.add_child(this.label);
         this._icon = new St.Icon({
                 gicon: gIcon,
                 style_class: 'popup-menu-icon' });
-        this.addActor(this._icon, { align: St.Align.END });
+        this.actor.add_child(this._icon, { align: St.Align.END });
     },
 };
 
 /*
  * AppsMenu Object
  */
-function AppsMenu() {
-    this._init.apply(this, arguments);
-}
-
-AppsMenu.prototype = {
-    __proto__: PanelMenu.SystemStatusButton.prototype,
+ 
+const AppsMenu = new Lang.Class({
+    Name: 'AppsMenu',
+    Extends: PanelMenu.SystemIndicator,
 
     _init: function() {
-        PanelMenu.SystemStatusButton.prototype._init.call(this, 'system-run-symbolic');
+        PanelMenu.Button.prototype._init.call();
+        this._indicator = this.addIndicator(new Gio.ThemedIcon({ name: 'system-run-symbolic' }));
+
         this.connect('destroy', Lang.bind(this, this._onDestroy));
         this._setupDirectory();
         this._setupAppMenuItems();
@@ -216,7 +216,7 @@ AppsMenu.prototype = {
         });
     },
 
-};
+});
 
 /*
  * Extension Setup
@@ -228,7 +228,7 @@ let _indicator;
 
 function enable() {
     _indicator = new AppsMenu;
-    Main.panel.addToStatusArea('apps-menu', _indicator);
+    Main.panel.addToStatusArea('QUICK', _indicator, 0, Main.panel._centerBox);
 }
 
 function disable() {
