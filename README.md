@@ -4,7 +4,7 @@ This extension adds a popup menu to the top bar of gnome-shell.
 
 If you have any custom launchers, for example from a previous version of gnome-panel, or from your desktop, you can use the new popup to start these.
 
-To populate the popup menu, put .desktop files into ~/.local/share/gnome-shell/quicklaunch/
+To populate the popup menu, put .desktop files into `~/.local/share/gnome-shell/quicklaunch/`
 
 # Install
 
