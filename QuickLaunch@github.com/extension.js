@@ -2,6 +2,7 @@
  */
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
+const Gtk = imports.gi.Gtk;
 
 const St = imports.gi.St;
 const Main = imports.ui.main;
@@ -60,7 +61,7 @@ const QuickLaunch = new Lang.Class({
         this.connect('destroy', Lang.bind(this, this._onDestroy));
         this._setupDirectory();
         this._setupAppMenuItems();
-        this._setupNewDialog();
+        this._setupNewEntryDialog();
         this._setupDirectoryMonitor();
     },
 
@@ -87,7 +88,7 @@ const QuickLaunch = new Lang.Class({
     _reloadAppMenu: function() {
         this.menu.removeAll();
         this._setupAppMenuItems();
-        this._setupNewDialog();
+        this._setupNewEntryDialog();
     },
 
     /**
@@ -189,7 +190,7 @@ const QuickLaunch = new Lang.Class({
         let menuItem = new PopupGiconMenuItem(appInfo.get_name(), appInfo.get_icon(), {});
         menuItem.connect('activate', Lang.bind(this, function (menuItem, event) {
                     callback(menuItem, event);
-                }));
+        }));
 
         return menuItem;
     },
@@ -197,14 +198,19 @@ const QuickLaunch = new Lang.Class({
     /**
      * add "new app"-dialog link to popup menu
      */
-    _setupNewDialog: function() {
+    _setupNewEntryDialog: function() {
+        let entryCreator = new DesktopEntryCreator();
+        if (! entryCreator.hasEditor()) {
+            global.log('gnome-desktop-item-edit is not installed!');
+            return;
+        }
         let item = new PopupMenu.PopupSeparatorMenuItem();
         this.menu.addMenuItem(item);
-        item = new PopupMenu.PopupMenuItem(_("Create new launcher..."));
+        item = new PopupMenu.PopupMenuItem(_("Add new launcher..."));
         item.connect('activate', Lang.bind(this, function(){
             if (!this._appDirectory.query_exists(null))
                 return;
-            new DesktopFileProvider().provide(AppsPath);
+            entryCreator.createEntry(AppsPath);
         }));
         this.menu.addMenuItem(item);
     },
@@ -212,24 +218,27 @@ const QuickLaunch = new Lang.Class({
 });
 
 /**
- * DesktopFileProvider
+ * DesktopEntryCreator
+ * 
+ * use gnome-dekstop-item-edit to create a new desktop entry file
  */
-const DesktopFileProvider = new Lang.Class({
-    Name: 'DesktopFileProvider',
+const DesktopEntryCreator = new Lang.Class({
+    Name: 'DesktopEntryCreator',
 
-    provide: function(destination) {
+    hasEditor: function() {
         let _gdie = Gio.file_new_for_path('/usr/bin/gnome-desktop-item-edit');
         if (!_gdie.query_exists(null)) {
-            global.log('gnome-desktop-item-edit is not installed!');
-            // TODO symlink an existing desktop file if edit is not installed
-            return;
-        } else {
-            // create filename
-            let uuid = this._createUUID();
-            let uuidDesktopPath = GLib.build_filenamev([destination, uuid+'.desktop']);
-            Util.trySpawn( ['gnome-desktop-item-edit', uuidDesktopPath ]);
-        }
+            return false;
+        } 
+        return true;
+    },
 
+    createEntry: function(destination) {
+        Util.trySpawn( ['gnome-desktop-item-edit', this._getNewEntryName(destination) ]);
+    },
+
+    _getNewEntryName: function(destination) {
+        return GLib.build_filenamev([destination, this._createUUID() + '.desktop']);
     },
 
     /*
