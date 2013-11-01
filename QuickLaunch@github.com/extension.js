@@ -34,11 +34,11 @@ PopupGiconMenuItem.prototype = {
         PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
 
         this.label = new St.Label({ text: text });
-        this.actor.add_child(this.label);
         this._icon = new St.Icon({
                 gicon: gIcon,
                 style_class: 'popup-menu-icon' });
         this.actor.add_child(this._icon, { align: St.Align.END });
+        this.actor.add_child(this.label);
     },
 };
 
