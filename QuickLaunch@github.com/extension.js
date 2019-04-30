@@ -24,15 +24,9 @@ const IndicatorName = 'QuickLaunch';
 /**
  * Gicon Menu Item Object
  */
-function PopupGiconMenuItem() {
-    this._init.apply(this, arguments);
-}
-
-PopupGiconMenuItem.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
-
-    _init: function (text, gIcon, params) {
-        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+class PopupGiconMenuItem extends PopupMenu.PopupBaseMenuItem {
+    constructor(text, gIcon, params) {
+        super();
 
         this.label = new St.Label({ text: text });
         this._icon = new St.Icon({
@@ -40,7 +34,7 @@ PopupGiconMenuItem.prototype = {
                 style_class: 'popup-menu-icon' });
         this.actor.add_child(this._icon, { align: St.Align.END });
         this.actor.add_child(this.label);
-    },
+    }
 };
 
 /**
@@ -145,7 +139,7 @@ const QuickLaunch = new Lang.Class({
             if (fileType == Gio.FileType.DIRECTORY)
                 continue;
             let name = info.get_name();
-            if( name.indexOf('.desktop') > -1) {
+            if( name.endsWith('.desktop')) {
                 let desktopPath =  GLib.build_filenamev([path, name]);
                 this._addAppItem(desktopPath);
                 i++;
