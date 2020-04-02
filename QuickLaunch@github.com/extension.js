@@ -3,6 +3,7 @@
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;
+const GObject = imports.gi.GObject;
 
 const St = imports.gi.St;
 const Main = imports.ui.main;
@@ -23,25 +24,21 @@ const IndicatorName = 'QuickLaunch';
 
 /**
  * Gicon Menu Item Object
- */
-function PopupGiconMenuItem() {
-    this._init.apply(this, arguments);
-}
-
-PopupGiconMenuItem.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
-
-    _init: function (text, gIcon, params) {
-        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
-
+ */     
+let PopupGiconMenuItem = GObject.registerClass(
+    class PopupGiconMenuItem extends PopupMenu.PopupBaseMenuItem {    
+    
+    _init(text, gIcon, params) {
+        super._init();
+        
         this.label = new St.Label({ text: text });
         this._icon = new St.Icon({
                 gicon: gIcon,
                 style_class: 'popup-menu-icon' });
-        this.actor.add_child(this._icon, { align: St.Align.END });
-        this.actor.add_child(this.label);
-    },
-};
+        this.add_actor(this._icon, { align: St.Align.END });
+        this.add_actor(this.label);
+    }
+});
 
 /**
  * QuickLaunch Object
@@ -54,7 +51,7 @@ const QuickLaunch = new Lang.Class({
         this.parent(null, IndicatorName);
         this.actor.accessible_role = Atk.Role.TOGGLE_BUTTON;
 
-        this._icon = new St.Icon({ icon_name: 'system-run-symbolic', style_class: 'system-status-icon' }); 
+        this._icon = new St.Icon({ icon_name: 'launcher-symbolic', style_class: 'system-status-icon' }); 
         this.actor.add_actor(this._icon);
         this.actor.add_style_class_name('panel-status-button');
 
@@ -145,7 +142,7 @@ const QuickLaunch = new Lang.Class({
             if (fileType == Gio.FileType.DIRECTORY)
                 continue;
             let name = info.get_name();
-            if( name.indexOf('.desktop') > -1) {
+            if( name.endsWith('.desktop')) {
                 let desktopPath =  GLib.build_filenamev([path, name]);
                 this._addAppItem(desktopPath);
                 i++;
