@@ -13,35 +13,15 @@ const Atk = imports.gi.Atk;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const Lang = imports.lang;
+const ExtensionUtils = imports.misc.extensionUtils;
 const FileUtils = imports.misc.fileUtils;
 const Util = imports.misc.util;
 
 const AppsPath = GLib.get_home_dir() + '/.local/share/gnome-shell/quicklaunch';
 const AppsPaths = [ GLib.get_home_dir() + '/.local/user/apps', AppsPath ];
 
-const IndicatorName = 'QuickLaunch';
-
-/**
- * Gicon Menu Item Object
- */
-function PopupGiconMenuItem() {
-    this._init.apply(this, arguments);
-}
-
-PopupGiconMenuItem.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
-
-    _init: function (text, gIcon, params) {
-        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
-
-        this.label = new St.Label({ text: text });
-        this._icon = new St.Icon({
-                gicon: gIcon,
-                style_class: 'popup-menu-icon' });
-        this.actor.add_child(this._icon, { align: St.Align.END });
-        this.actor.add_child(this.label);
-    },
-};
+const Me = ExtensionUtils.getCurrentExtension();
+const IndicatorName = Me.metadata.name;
 
 /**
  * QuickLaunch Object
@@ -50,18 +30,24 @@ const QuickLaunch = new Lang.Class({
     Name: IndicatorName,
     Extends: PanelMenu.Button,
 
-    _init: function(metadata, params) {
+    _init: function(menuAlignment, nameText, dontCreateMenu) {
+        this.item = new PanelMenu.Button(arguments);
         this.parent(null, IndicatorName);
-        this.actor.accessible_role = Atk.Role.TOGGLE_BUTTON;
+        this.item.accessible_role = Atk.Role.TOGGLE_BUTTON;
+        this.item.add_style_class_name('panel-status-button');
 
-        this._icon = new St.Icon({ icon_name: 'system-run-symbolic', style_class: 'system-status-icon' }); 
-        this.actor.add_actor(this._icon);
-        this.actor.add_style_class_name('panel-status-button');
+        this._icon = new St.Icon({
+            icon_name: 'user-bookmarks-symbolic',
+            style_class: 'system-status-icon' }); 
+        this._indicators = new St.BoxLayout( {style_class: 'panel-status-indicators-box'} );
+        this._indicators.add(this._icon);
+        this.actor.add_child(this._indicators);
 
-        this.connect('destroy', Lang.bind(this, this._onDestroy));
+        this.item.connect('destroy', Lang.bind(this, this._onDestroy));
         this._setupDirectory();
         this._setupAppMenuItems();
-        this._setupNewEntryDialog();
+//### disabled
+//###        this._setupNewEntryDialog();
         this._setupDirectoryMonitor();
     },
 
@@ -88,7 +74,8 @@ const QuickLaunch = new Lang.Class({
     _reloadAppMenu: function() {
         this.menu.removeAll();
         this._setupAppMenuItems();
-        this._setupNewEntryDialog();
+//### disabled
+//###        this._setupNewEntryDialog();
     },
 
     /**
@@ -146,6 +133,7 @@ const QuickLaunch = new Lang.Class({
                 continue;
             let name = info.get_name();
             if( name.indexOf('.desktop') > -1) {
+                global.log('Add menu entry: ' + name);
                 let desktopPath =  GLib.build_filenamev([path, name]);
                 this._addAppItem(desktopPath);
                 i++;
@@ -187,7 +175,8 @@ const QuickLaunch = new Lang.Class({
      * create popoup menu item with callback
      */
     _createAppItem: function(appInfo, callback) {
-        let menuItem = new PopupGiconMenuItem(appInfo.get_name(), appInfo.get_icon(), {});
+        let menuItem = new PopupMenu.PopupImageMenuItem(
+            appInfo.get_name(), appInfo.get_icon(), {});
         menuItem.connect('activate', Lang.bind(this, function (menuItem, event) {
                     callback(menuItem, event);
         }));
@@ -221,6 +210,9 @@ const QuickLaunch = new Lang.Class({
  * DesktopEntryCreator
  * 
  * use gnome-dekstop-item-edit to create a new desktop entry file
+ *
+ * FIXME: not available in default Ubuntu 20.04
+ *
  */
 const DesktopEntryCreator = new Lang.Class({
     Name: 'DesktopEntryCreator',
@@ -256,12 +248,14 @@ const DesktopEntryCreator = new Lang.Class({
  * Extension Setup
  */
 function init() {
+    global.log(`Initializing ${Me.metadata.name} version ${Me.metadata.version}`);
 }
 
 let _indicator;
 
 function enable() {
-    _indicator = new QuickLaunch();
+    _indicator = new QuickLaunch(0, IndicatorName);
+    // Default to position = 0 and _rightBox boxContainer
     Main.panel.addToStatusArea(IndicatorName, _indicator);
 }
 
