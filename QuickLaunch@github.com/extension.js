@@ -3,6 +3,7 @@
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;
+const GObject = imports.gi.GObject;
 
 const St = imports.gi.St;
 const Main = imports.ui.main;
@@ -24,77 +25,73 @@ const IndicatorName = 'QuickLaunch';
 /**
  * Gicon Menu Item Object
  */
-function PopupGiconMenuItem() {
-    this._init.apply(this, arguments);
-}
+class PopupGiconMenuItem extends PopupMenu.PopupBaseMenuItem {
+    static {
+        GObject.registerClass(this);
+    }
 
-PopupGiconMenuItem.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
-
-    _init: function (text, gIcon, params) {
-        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+    _init(text, gIcon, params) {
+        super._init(params);
 
         this.label = new St.Label({ text: text });
         this._icon = new St.Icon({
                 gicon: gIcon,
                 style_class: 'popup-menu-icon' });
-        this.actor.add_child(this._icon, { align: St.Align.END });
-        this.actor.add_child(this.label);
-    },
+        this.add_actor(this._icon);
+        this.add_actor(this.label);
+    }
 };
 
 /**
  * QuickLaunch Object
  */
-const QuickLaunch = new Lang.Class({
-    Name: IndicatorName,
-    Extends: PanelMenu.Button,
+class QuickLaunch extends PanelMenu.Button {
+    static {
+        GObject.registerClass(this);
+    }
 
-    _init: function(metadata, params) {
-        this.parent(null, IndicatorName);
-        this.actor.accessible_role = Atk.Role.TOGGLE_BUTTON;
+    _init() {
+        super._init( 0.0, IndicatorName );
 
-        this._icon = new St.Icon({ icon_name: 'system-run-symbolic', style_class: 'system-status-icon' }); 
-        this.actor.add_actor(this._icon);
-        this.actor.add_style_class_name('panel-status-button');
+        this._icon = new St.Icon({ icon_name: 'user-bookmarks-symbolic', style_class: 'system-status-icon' });
+        this.add_actor(this._icon);
+        this.add_style_class_name('panel-status-button');
 
         this.connect('destroy', Lang.bind(this, this._onDestroy));
         this._setupDirectory();
         this._setupAppMenuItems();
-        this._setupNewEntryDialog();
         this._setupDirectoryMonitor();
-    },
+    }
 
-    _onDestroy: function() {
+    _onDestroy() {
         this._monitor.cancel();
         Mainloop.source_remove(this._appDirectoryTimeoutId);
-    },
+    }
 
     /**
      * create dir unless exists
      */
-    _setupDirectory: function() {
+    _setupDirectory() {
         let dir = Gio.file_new_for_path(AppsPath);
         if (!dir.query_exists(null)) {
             global.log('create dir ' + AppsPath );
             dir.make_directory_with_parents(null);
         }
         this._appDirectory = dir;
-    },
+    }
 
     /**
      * reload the menu
      */
-    _reloadAppMenu: function() {
+    _reloadAppMenu() {
         this.menu.removeAll();
         this._setupAppMenuItems();
-        this._setupNewEntryDialog();
-    },
+    }
 
     /**
      * change directory monitor, see placeDisplay.js
      */
-    _setupDirectoryMonitor: function() {
+    _setupDirectoryMonitor() {
         if (!this._appDirectory.query_exists(null))
             return;
         this._monitor = this._appDirectory.monitor_directory(Gio.FileMonitorFlags.NONE, null);
@@ -109,20 +106,20 @@ const QuickLaunch = new Lang.Class({
                 return false;
             }));
         }));
-    },
+    }
 
     /**
      * setup menu items for all desktop files
      */
-    _setupAppMenuItems: function(path) {
+    _setupAppMenuItems(path) {
         for (let path in AppsPaths)
             this._createDefaultApps(AppsPaths[path]);
-    },
+    }
 
     /**
      * load desktop files from a directory
      */
-    _createDefaultApps: function(path) {
+    _createDefaultApps(path) {
         let _appsDir = Gio.file_new_for_path(path);
         if (!_appsDir.query_exists(null)) {
             global.log('App path ' + path + ' could not be opened!');
@@ -152,12 +149,12 @@ const QuickLaunch = new Lang.Class({
             }
         }
         fileEnum.close(null);
-    },
+    }
 
     /**
      * add menu item to popup
      */
-    _addAppItem: function(desktopPath) {
+    _addAppItem(desktopPath) {
         // from http://www.roojs.com/seed/gir-1.2-gtk-3.0/gjs/
         let appInfo = Gio.DesktopAppInfo.new_from_filename(desktopPath);
         if (!appInfo) {
@@ -181,76 +178,21 @@ const QuickLaunch = new Lang.Class({
         });
         this.menu.addMenuItem(menuItem, pos);
         return menuItem;
-    },
+    }
 
     /**
      * create popoup menu item with callback
      */
-    _createAppItem: function(appInfo, callback) {
+    _createAppItem(appInfo, callback) {
         let menuItem = new PopupGiconMenuItem(appInfo.get_name(), appInfo.get_icon(), {});
         menuItem.connect('activate', Lang.bind(this, function (menuItem, event) {
                     callback(menuItem, event);
         }));
 
         return menuItem;
-    },
+    }
 
-    /**
-     * add "new app"-dialog link to popup menu
-     */
-    _setupNewEntryDialog: function() {
-        let entryCreator = new DesktopEntryCreator();
-        if (! entryCreator.hasEditor()) {
-            global.log('gnome-desktop-item-edit is not installed!');
-            return;
-        }
-        let item = new PopupMenu.PopupSeparatorMenuItem();
-        this.menu.addMenuItem(item);
-        item = new PopupMenu.PopupMenuItem(_("Add new launcher..."));
-        item.connect('activate', Lang.bind(this, function(){
-            if (!this._appDirectory.query_exists(null))
-                return;
-            entryCreator.createEntry(AppsPath);
-        }));
-        this.menu.addMenuItem(item);
-    },
-
-});
-
-/**
- * DesktopEntryCreator
- * 
- * use gnome-dekstop-item-edit to create a new desktop entry file
- */
-const DesktopEntryCreator = new Lang.Class({
-    Name: 'DesktopEntryCreator',
-
-    hasEditor: function() {
-        let _gdie = Gio.file_new_for_path('/usr/bin/gnome-desktop-item-edit');
-        if (!_gdie.query_exists(null)) {
-            return false;
-        } 
-        return true;
-    },
-
-    createEntry: function(destination) {
-        Util.trySpawn( ['gnome-desktop-item-edit', this._getNewEntryName(destination) ]);
-    },
-
-    _getNewEntryName: function(destination) {
-        return GLib.build_filenamev([destination, this._createUUID() + '.desktop']);
-    },
-
-    /*
-     * thanks to stackoverflow:
-     */
-    _createUUID: function() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-            return v.toString(16);
-        });
-    },
-});
+};
 
 /**
  * Extension Setup
@@ -258,7 +200,7 @@ const DesktopEntryCreator = new Lang.Class({
 function init() {
 }
 
-let _indicator;
+let _indicator = null;
 
 function enable() {
     _indicator = new QuickLaunch();
@@ -266,6 +208,6 @@ function enable() {
 }
 
 function disable() {
-    _indicator.destroy();
+    _indicator?.destroy();
     _indicator = null;
 }
