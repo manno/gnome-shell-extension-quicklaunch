@@ -25,11 +25,8 @@ const IndicatorName = 'QuickLaunch';
 /**
  * Gicon Menu Item Object
  */
+let PopupGiconMenuItem = GObject.registerClass(
 class PopupGiconMenuItem extends PopupMenu.PopupBaseMenuItem {
-    static {
-        GObject.registerClass(this);
-    }
-
     _init(text, gIcon, params) {
         super._init(params);
 
@@ -40,15 +37,13 @@ class PopupGiconMenuItem extends PopupMenu.PopupBaseMenuItem {
         this.add_actor(this._icon);
         this.add_actor(this.label);
     }
-};
+});
 
 /**
  * QuickLaunch Object
  */
+let QuickLaunch = GObject.registerClass(
 class QuickLaunch extends PanelMenu.Button {
-    static {
-        GObject.registerClass(this);
-    }
 
     _init() {
         super._init( 0.0, IndicatorName );
@@ -192,7 +187,7 @@ class QuickLaunch extends PanelMenu.Button {
         return menuItem;
     }
 
-};
+});
 
 /**
  * Extension Setup
