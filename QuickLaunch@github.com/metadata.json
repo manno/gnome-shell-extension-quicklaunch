@@ -1,1 +1,1 @@
-{"shell-version": ["41", "42"], "uuid": "QuickLaunch@github.com", "name": "QuickLaunch", "description": "Quick Launch - Launch custom made .desktop files from a directory", "url": "https://github.com/manno/gnome-shell-extension-quicklaunch","version":10}
+{"shell-version": ["43", "41", "42"], "uuid": "QuickLaunch@github.com", "name": "QuickLaunch", "description": "Quick Launch - Launch custom made .desktop files from a directory", "url": "https://github.com/manno/gnome-shell-extension-quicklaunch","version":10}
