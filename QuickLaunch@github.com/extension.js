@@ -1,21 +1,18 @@
 /* vim: ts=4 sw=4
  */
-const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
-const Gtk = imports.gi.Gtk;
-const GObject = imports.gi.GObject;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Gtk from 'gi://Gtk';
+import GObject from 'gi://GObject';
+import Shell from 'gi://Shell';
+import St from 'gi://St';
 
-const St = imports.gi.St;
-const Main = imports.ui.main;
-const Mainloop = imports.mainloop;
-const Shell = imports.gi.Shell;
-const Atk = imports.gi.Atk;
-
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
-const Lang = imports.lang;
-const FileUtils = imports.misc.fileUtils;
-const Util = imports.misc.util;
+import * as FileUtils from 'resource:///org/gnome/shell/misc/fileUtils.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+// for lowerBound; import * as Util from 'resource:///org/gnome/shell/misc/util.js';
+import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
 const AppsPath = GLib.get_home_dir() + '/.local/share/gnome-shell/quicklaunch';
 const AppsPaths = [ GLib.get_home_dir() + '/.local/user/apps', AppsPath ];
@@ -52,7 +49,7 @@ class QuickLaunch extends PanelMenu.Button {
         this.add_actor(this._icon);
         this.add_style_class_name('panel-status-button');
 
-        this.connect('destroy', Lang.bind(this, this._onDestroy));
+        this.connect('destroy', () => this.onDestroy());
         this._setupDirectory();
         this._setupAppMenuItems();
         this._setupDirectoryMonitor();
@@ -60,7 +57,7 @@ class QuickLaunch extends PanelMenu.Button {
 
     _onDestroy() {
         this._monitor.cancel();
-        Mainloop.source_remove(this._appDirectoryTimeoutId);
+        GLib.source_remove(this._appDirectoryTimeoutId);
     }
 
     /**
@@ -91,16 +88,16 @@ class QuickLaunch extends PanelMenu.Button {
             return;
         this._monitor = this._appDirectory.monitor_directory(Gio.FileMonitorFlags.NONE, null);
         this._appDirectoryTimeoutId = 0;
-        this._monitor.connect('changed', Lang.bind(this, function () {
+        this._monitor.connect('changed', () => {
             if (this._appDirectoryTimeoutId > 0)
                 return;
             /* Defensive event compression */
-            this._appDirectoryTimeoutId = Mainloop.timeout_add(100, Lang.bind(this, function () {
+            this._appDirectoryTimeoutId = GLib.timeout_add(100, () => {
                 this._appDirectoryTimeoutId = 0;
                 this._reloadAppMenu();
                 return false;
-            }));
-        }));
+            });
+        });
     }
 
     /**
@@ -146,6 +143,32 @@ class QuickLaunch extends PanelMenu.Button {
         fileEnum.close(null);
     }
 
+
+    /**
+     * From shell/js/misc/util.js as lowerBound is for some reason not exported
+     */
+    lowerBound(array, val, cmp) {
+        let min, max, mid, v;
+        cmp ||= (a, b) => a - b;
+
+        if (array.length === 0)
+            return 0;
+
+        min = 0;
+        max = array.length;
+        while (min < (max - 1)) {
+            mid = Math.floor((min + max) / 2);
+            v = cmp(array[mid], val);
+
+            if (v < 0)
+                min = mid + 1;
+            else
+                max = mid;
+        }
+
+        return min === max || cmp(array[min], val) < 0 ? max : min;
+    }
+
     /**
      * add menu item to popup
      */
@@ -165,7 +188,7 @@ class QuickLaunch extends PanelMenu.Button {
 
         // alphabetically sort list by app name
         let sortKey = appInfo.get_name() || desktopPath;
-        let pos = Util.lowerBound(this.menu._getMenuItems(), sortKey, function (a,b) {
+        let pos = /* Util. */ this.lowerBound(this.menu._getMenuItems(), sortKey, function (a,b) {
             if (String(a.label.text).toUpperCase() > String(b).toUpperCase())
                 return 0;
             else
@@ -180,29 +203,35 @@ class QuickLaunch extends PanelMenu.Button {
      */
     _createAppItem(appInfo, callback) {
         let menuItem = new PopupGiconMenuItem(appInfo.get_name(), appInfo.get_icon(), {});
-        menuItem.connect('activate', Lang.bind(this, function (menuItem, event) {
+        menuItem.connect('activate', (menuItem, event) => {
                     callback(menuItem, event);
-        }));
+        });
 
         return menuItem;
     }
 
 });
 
+
 /**
  * Extension Setup
  */
-function init() {
-}
+export default class QuickLaunchExtension extends Extension
+{
+    constructor(metadata)
+    {
+        super(metadata);
 
-let _indicator = null;
+        this._indicator = null;
+    }
 
-function enable() {
-    _indicator = new QuickLaunch();
-    Main.panel.addToStatusArea(IndicatorName, _indicator);
-}
+    enable() {
+        this._indicator = new QuickLaunch();
+        Main.panel.addToStatusArea(IndicatorName, this._indicator);
+    }
 
-function disable() {
-    _indicator?.destroy();
-    _indicator = null;
+    disable() {
+        this._indicator?.destroy();
+        this._indicator = null;
+    }
 }
