@@ -1,20 +1,18 @@
 /* vim: ts=4 sw=4
  */
-const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
-const Gtk = imports.gi.Gtk;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Gtk from 'gi://Gtk';
+import GObject from 'gi://GObject';
+import Shell from 'gi://Shell';
+import St from 'gi://St';
 
-const St = imports.gi.St;
-const Main = imports.ui.main;
-const Mainloop = imports.mainloop;
-const Shell = imports.gi.Shell;
-const Atk = imports.gi.Atk;
-
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
-const Lang = imports.lang;
-const FileUtils = imports.misc.fileUtils;
-const Util = imports.misc.util;
+import * as FileUtils from 'resource:///org/gnome/shell/misc/fileUtils.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+// for lowerBound; import * as Util from 'resource:///org/gnome/shell/misc/util.js';
+import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 
 const AppsPath = GLib.get_home_dir() + '/.local/share/gnome-shell/quicklaunch';
 const AppsPaths = [ GLib.get_home_dir() + '/.local/user/apps', AppsPath ];
@@ -24,105 +22,96 @@ const IndicatorName = 'QuickLaunch';
 /**
  * Gicon Menu Item Object
  */
-function PopupGiconMenuItem() {
-    this._init.apply(this, arguments);
-}
-
-PopupGiconMenuItem.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
-
-    _init: function (text, gIcon, params) {
-        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+let PopupGiconMenuItem = GObject.registerClass(
+class PopupGiconMenuItem extends PopupMenu.PopupBaseMenuItem {
+    _init(text, gIcon, params) {
+        super._init(params);
 
         this.label = new St.Label({ text: text });
         this._icon = new St.Icon({
                 gicon: gIcon,
                 style_class: 'popup-menu-icon' });
-        this.actor.add_child(this._icon, { align: St.Align.END });
-        this.actor.add_child(this.label);
-    },
-};
+        this.add_actor(this._icon);
+        this.add_actor(this.label);
+    }
+});
 
 /**
  * QuickLaunch Object
  */
-const QuickLaunch = new Lang.Class({
-    Name: IndicatorName,
-    Extends: PanelMenu.Button,
+let QuickLaunch = GObject.registerClass(
+class QuickLaunch extends PanelMenu.Button {
 
-    _init: function(metadata, params) {
-        this.parent(null, IndicatorName);
-        this.actor.accessible_role = Atk.Role.TOGGLE_BUTTON;
+    _init() {
+        super._init( 0.0, IndicatorName );
 
-        this._icon = new St.Icon({ icon_name: 'system-run-symbolic', style_class: 'system-status-icon' }); 
-        this.actor.add_actor(this._icon);
-        this.actor.add_style_class_name('panel-status-button');
+        this._icon = new St.Icon({ icon_name: 'user-bookmarks-symbolic', style_class: 'system-status-icon' });
+        this.add_actor(this._icon);
+        this.add_style_class_name('panel-status-button');
 
-        this.connect('destroy', Lang.bind(this, this._onDestroy));
+        this.connect('destroy', () => this.onDestroy());
         this._setupDirectory();
         this._setupAppMenuItems();
-        this._setupNewEntryDialog();
         this._setupDirectoryMonitor();
-    },
+    }
 
-    _onDestroy: function() {
+    _onDestroy() {
         this._monitor.cancel();
-        Mainloop.source_remove(this._appDirectoryTimeoutId);
-    },
+        GLib.source_remove(this._appDirectoryTimeoutId);
+    }
 
     /**
      * create dir unless exists
      */
-    _setupDirectory: function() {
+    _setupDirectory() {
         let dir = Gio.file_new_for_path(AppsPath);
         if (!dir.query_exists(null)) {
             global.log('create dir ' + AppsPath );
             dir.make_directory_with_parents(null);
         }
         this._appDirectory = dir;
-    },
+    }
 
     /**
      * reload the menu
      */
-    _reloadAppMenu: function() {
+    _reloadAppMenu() {
         this.menu.removeAll();
         this._setupAppMenuItems();
-        this._setupNewEntryDialog();
-    },
+    }
 
     /**
      * change directory monitor, see placeDisplay.js
      */
-    _setupDirectoryMonitor: function() {
+    _setupDirectoryMonitor() {
         if (!this._appDirectory.query_exists(null))
             return;
         this._monitor = this._appDirectory.monitor_directory(Gio.FileMonitorFlags.NONE, null);
         this._appDirectoryTimeoutId = 0;
-        this._monitor.connect('changed', Lang.bind(this, function () {
+        this._monitor.connect('changed', () => {
             if (this._appDirectoryTimeoutId > 0)
                 return;
             /* Defensive event compression */
-            this._appDirectoryTimeoutId = Mainloop.timeout_add(100, Lang.bind(this, function () {
+            this._appDirectoryTimeoutId = GLib.timeout_add(100, () => {
                 this._appDirectoryTimeoutId = 0;
                 this._reloadAppMenu();
                 return false;
-            }));
-        }));
-    },
+            });
+        });
+    }
 
     /**
      * setup menu items for all desktop files
      */
-    _setupAppMenuItems: function(path) {
+    _setupAppMenuItems(path) {
         for (let path in AppsPaths)
             this._createDefaultApps(AppsPaths[path]);
-    },
+    }
 
     /**
      * load desktop files from a directory
      */
-    _createDefaultApps: function(path) {
+    _createDefaultApps(path) {
         let _appsDir = Gio.file_new_for_path(path);
         if (!_appsDir.query_exists(null)) {
             global.log('App path ' + path + ' could not be opened!');
@@ -152,12 +141,38 @@ const QuickLaunch = new Lang.Class({
             }
         }
         fileEnum.close(null);
-    },
+    }
+
+
+    /**
+     * From shell/js/misc/util.js as lowerBound is for some reason not exported
+     */
+    lowerBound(array, val, cmp) {
+        let min, max, mid, v;
+        cmp ||= (a, b) => a - b;
+
+        if (array.length === 0)
+            return 0;
+
+        min = 0;
+        max = array.length;
+        while (min < (max - 1)) {
+            mid = Math.floor((min + max) / 2);
+            v = cmp(array[mid], val);
+
+            if (v < 0)
+                min = mid + 1;
+            else
+                max = mid;
+        }
+
+        return min === max || cmp(array[min], val) < 0 ? max : min;
+    }
 
     /**
      * add menu item to popup
      */
-    _addAppItem: function(desktopPath) {
+    _addAppItem(desktopPath) {
         // from http://www.roojs.com/seed/gir-1.2-gtk-3.0/gjs/
         let appInfo = Gio.DesktopAppInfo.new_from_filename(desktopPath);
         if (!appInfo) {
@@ -173,7 +188,7 @@ const QuickLaunch = new Lang.Class({
 
         // alphabetically sort list by app name
         let sortKey = appInfo.get_name() || desktopPath;
-        let pos = Util.lowerBound(this.menu._getMenuItems(), sortKey, function (a,b) {
+        let pos = /* Util. */ this.lowerBound(this.menu._getMenuItems(), sortKey, function (a,b) {
             if (String(a.label.text).toUpperCase() > String(b).toUpperCase())
                 return 0;
             else
@@ -181,91 +196,42 @@ const QuickLaunch = new Lang.Class({
         });
         this.menu.addMenuItem(menuItem, pos);
         return menuItem;
-    },
+    }
 
     /**
      * create popoup menu item with callback
      */
-    _createAppItem: function(appInfo, callback) {
+    _createAppItem(appInfo, callback) {
         let menuItem = new PopupGiconMenuItem(appInfo.get_name(), appInfo.get_icon(), {});
-        menuItem.connect('activate', Lang.bind(this, function (menuItem, event) {
+        menuItem.connect('activate', (menuItem, event) => {
                     callback(menuItem, event);
-        }));
+        });
 
         return menuItem;
-    },
-
-    /**
-     * add "new app"-dialog link to popup menu
-     */
-    _setupNewEntryDialog: function() {
-        let entryCreator = new DesktopEntryCreator();
-        if (! entryCreator.hasEditor()) {
-            global.log('gnome-desktop-item-edit is not installed!');
-            return;
-        }
-        let item = new PopupMenu.PopupSeparatorMenuItem();
-        this.menu.addMenuItem(item);
-        item = new PopupMenu.PopupMenuItem(_("Add new launcher..."));
-        item.connect('activate', Lang.bind(this, function(){
-            if (!this._appDirectory.query_exists(null))
-                return;
-            entryCreator.createEntry(AppsPath);
-        }));
-        this.menu.addMenuItem(item);
-    },
+    }
 
 });
 
-/**
- * DesktopEntryCreator
- * 
- * use gnome-dekstop-item-edit to create a new desktop entry file
- */
-const DesktopEntryCreator = new Lang.Class({
-    Name: 'DesktopEntryCreator',
-
-    hasEditor: function() {
-        let _gdie = Gio.file_new_for_path('/usr/bin/gnome-desktop-item-edit');
-        if (!_gdie.query_exists(null)) {
-            return false;
-        } 
-        return true;
-    },
-
-    createEntry: function(destination) {
-        Util.trySpawn( ['gnome-desktop-item-edit', this._getNewEntryName(destination) ]);
-    },
-
-    _getNewEntryName: function(destination) {
-        return GLib.build_filenamev([destination, this._createUUID() + '.desktop']);
-    },
-
-    /*
-     * thanks to stackoverflow:
-     */
-    _createUUID: function() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-            return v.toString(16);
-        });
-    },
-});
 
 /**
  * Extension Setup
  */
-function init() {
-}
+export default class QuickLaunchExtension extends Extension
+{
+    constructor(metadata)
+    {
+        super(metadata);
 
-let _indicator;
+        this._indicator = null;
+    }
 
-function enable() {
-    _indicator = new QuickLaunch();
-    Main.panel.addToStatusArea(IndicatorName, _indicator);
-}
+    enable() {
+        this._indicator = new QuickLaunch();
+        Main.panel.addToStatusArea(IndicatorName, this._indicator);
+    }
 
-function disable() {
-    _indicator.destroy();
-    _indicator = null;
+    disable() {
+        this._indicator?.destroy();
+        this._indicator = null;
+    }
 }
